@@ -1,0 +1,34 @@
+[Unit]
+Description= Postgress Server on port %i
+
+#Requirements
+Requires=etcd.service
+Requires=docker.service
+Requires=postgresql-discovery@%i.service
+
+#Depency ordering
+After=etcd.service
+After=docker.service
+Before=postgresql-discovery@%i.service
+
+[Service]
+TimeoutStartSec=0
+KillMode=none
+
+
+EnvironmentFile=/etc/environment
+
+ExecStartPre=-/usr/bin/docker kill postgresql.%i
+ExecStartPre=-/usr/bin/docker rm postgresql.%i
+ExecStartPre=/usr/bin/docker pull ctlc/postgres
+ExecStart=/usr/bin/docker run --name postgres.%i -p ${COREOS_Private_IPV4}:%i:80 \ ctlc/postgres /usr/sbin/postgres2ctl -D FOREGROUND
+
+#ExecStartPost=/usr/bin/etcdctl set /domains/example.com/10.10.10.123:8081 running
+ExecStop=/usr/bin/docker stop postgres.%i
+#ExecStopPost=/usr/bin/etcdctl rm /domains/example.com/10.10.10.123:8081
+
+[X-Fleet]
+X-Conflicts=postgres@*.service
+
+#[Install]
+#WantedBy=multi-user.target
